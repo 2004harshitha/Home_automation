@@ -115,7 +115,7 @@ def transcribe_file(wav_path: str, print_progress: bool = False):
 
     # 2. Transcribe with Context Prompt
     # This helps Whisper distinguish "light 1" from "light on"
-    initial_prompt = "James, the name of ai assistant listenting the commads. Voice commands for home automation like, Turn on light 1, Turn off light 2, Turn on light 3 or Turn off light 4."
+    initial_prompt = "James, the name of ai assistant listenting the commads. Voice commands for home automation like, Turn on light 1, Turn off light 1, motor on, motor off, fan on, fan off, socket on or socket off."
     
     # We force English ('en') to prevent it from guessing random languages on noise
     result = model.transcribe(
@@ -124,6 +124,16 @@ def transcribe_file(wav_path: str, print_progress: bool = False):
         fp16=False, 
         initial_prompt=initial_prompt
     )
+
+    print("================== Transcription Result Start=================")
+    print(f"Full transcription result: {result}")
+    print("================== Transcription Result End=================")
+    
+    # #i want to print language and confidence
+    # detected_lang = result.get("language", "unknown")
+    # lang_conf = result.get("language_confidence", 0.0)
+    # if print_progress:
+    #     print(f"Detected language: {detected_lang} (confidence: {lang_conf:.2f})")
 
     detected_text = result["text"].strip()
     
@@ -140,23 +150,48 @@ def transcribe_file(wav_path: str, print_progress: bool = False):
     uniqueWords = set(a.split())
 
     # Check for keywords (removed strict "james" requirement for reliability)
-    if ("turn" in a) and (("on" in a) or ("off" in a)):
-        
+    if((("on" in uniqueWords) and ("off" in uniqueWords)) or (
+        ("light" in uniqueWords) and ("motor" in uniqueWords)) or (
+            ("light" in uniqueWords) and ("fan" in uniqueWords)) or (
+                ("light" in uniqueWords) and ("socket" in uniqueWords)) or (
+                    ("motor" in uniqueWords) and ("fan" in uniqueWords)) or (
+                        ("motor" in uniqueWords) and ("socket" in uniqueWords)) or (
+                            ("fan" in uniqueWords) and ("socket" in uniqueWords))):
         # Determine Action
-        action = "on" if "on" in uniqueWords else "off"
-        
-        # Determine Target (Light 1, 2, 3, 4)
-        target = None
-        if "one" in uniqueWords or "1" in uniqueWords: target = "1"
-        elif "two" in uniqueWords or "2" in uniqueWords: target = "2"
-        elif "three" in uniqueWords or "3" in uniqueWords: target = "3"
-        elif "four" in uniqueWords or "4" in uniqueWords: target = "4"
-        
-        if target:
-            sendText = f"light {target} {action}"
-    
-    stop_now = dt.now().strftime("%H:%M:%S")
-    print(f"End Time:   {stop_now}")
+        return {
+            "success": True,
+            "message": "transcribed",
+            "language": "en",
+            "lang_confidence": 1.0,
+            "text": "unclear command, both on and off detected"
+        }
+    elif ("turn" in a):
+        if ("light" in uniqueWords) and (("on" in uniqueWords) or ("off" in uniqueWords)):       
+            # Determine Action
+            action = "on" if "on" in uniqueWords else "off"
+            # Determine Target (Light 1, 2, 3, 4)
+            target = None
+            if "one" in uniqueWords or "1" in uniqueWords: target = "1"
+            elif "two" in uniqueWords or "2" in uniqueWords: target = "2"
+            elif "three" in uniqueWords or "3" in uniqueWords: target = "3"
+            elif "four" in uniqueWords or "4" in uniqueWords: target = "4"
+
+            if target:
+                sendText = f"light {target} {action}"
+            else:
+                sendText = f"light Unknown {action}"
+            
+        elif ("motor" in uniqueWords) and (("on" in uniqueWords) or ("off" in uniqueWords)):
+            action = "on" if "on" in uniqueWords else "off"
+            sendText = f"motor {action}"
+        elif ("fan" in uniqueWords) and (("on" in uniqueWords) or ("off" in uniqueWords)):
+            action = "on" if "on" in uniqueWords else "off"
+            sendText = f"fan {action}"
+        elif ("socket" in uniqueWords) and (("on" in uniqueWords) or ("off" in uniqueWords)):
+            action = "on" if "on" in uniqueWords else "off"
+            sendText = f"socket {action}"
+        stop_now = dt.now().strftime("%H:%M:%S")
+        print(f"End Time:   {stop_now}")
 
     return {
         "success": True,
